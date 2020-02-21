@@ -13,7 +13,7 @@ const getIndex = (request, response) => {
 const getChatroom = (request, response) => {
   response.writeHead(200, { 'Content-Type': 'text/html' });
   response.write(chatPage);
-  response.end(); 
+  response.end();
 };
 
 const getCSS = (request, response) => {
@@ -25,4 +25,5 @@ const getCSS = (request, response) => {
 module.exports = {
   getIndex,
   getCSS,
+  getChatroom,
 };
