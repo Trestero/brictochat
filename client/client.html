@@ -2,5 +2,161 @@
     <head>
         <meta charset="utf-8">
         <title>Brictochat</title>
+        <link rel="stylesheet" type="text/css" href="style.css"/>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.min.js"></script>
+    <script type="text/babel">
+    // Element references
+    const roomList = document.querySelector('#roomList');
+    const roomNameField = document.querySelector('#roomNameField');
+    const addRoomButton = document.querySelector('#addRoomButton');
+    
+    
+    const joinRoom = (roomID) => {
+        window.location.pathname = `/chatroom?${roomID}`;
+
+    };
+
+    const receiveRoomList = (xhr) => {
+            switch(xhr.status){
+            case 200: // Received list of rooms, create displays for them
+                const rooms = JSON.parse(xhr.response);
+                console.log(rooms);
+                for (let room of rooms) {
+                    let div = document.createElement('div');
+                    div.setAttribute('class', 'roomListing');
+                    let name = document.createElement('h2');
+                    name.innerHTML = `${room.name}: ${room.count} Messages`;
+                    let joinButton = document.createElement('button');
+                    joinButton.innerHTML = 'JOIN';
+                    joinButton.onclick = () => joinRoom(room.id);
+                    
+                    // add to HTML hierarchy
+                    div.appendChild(name);
+                    div.appendChild(joinButton);
+                    roomList.appendChild(div);
+                }
+                break;
+            default:
+                // kick response down to the basic handler
+                handleResponse(xhr.status);
+                break;
+        }
+    };
+
+
+    // 
+    const roomCreationResponseHandler = (xhr) => {
+        console.log(xhr.response);
+            switch(xhr.status){
+            case 201: // room created successfully, sends creator directly to it
+                const obj = JSON.parse(xhr.response);
+                joinRoom(obj.roomID);
+                break;
+            default:
+                // kick response down to the basic handler
+                handleResponse(xhr.status);
+                break;
+        }
+    };
+
+    // Generic response handler, used as fallback for unrecognized responses
+    const handleResponse = (statusCode) => {
+        
+        // Represents the message displayed by the client, based on the status code
+        let statusMessage = "";
+        
+        switch(statusCode){
+            case 200:
+                statusMessage = 'Success';
+                break;
+            case 201:
+                statusMessage = 'Create';
+                break;
+            case 204:
+                statusMessage = 'Updated (No Content)';
+                break;
+            case 400:
+                statusMessage = 'Bad Request';
+                break;
+            case 404:
+                statusMessage = 'Resource Not Found';
+                break;
+            default:
+                statusMessage = `ERROR: The client has not implemented status code ${statusCode}`;
+                break;
+        }
+        
+        alert(`${statusMessage}`);
+    };
+
+    const sendPost = (e, requestUrl, args) => {
+        e.preventDefault();
+                
+        // configure XHR
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', requestUrl);
+        xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        xhr.setRequestHeader('Accept', 'application/json');
+        
+        if(requestUrl === '/makeRoom') {
+            xhr.onload = () => roomCreationResponseHandler(xhr);
+        }
+
+        // assemble and insert form data
+        let formData = '';
+        for(let a in args){
+        formData += `${a}=${args[a]}&`;    
+        }
+        
+        // trim the extra & that will exist at the end, slightly hacky
+        formData = formData.slice(0, formData.length - 1);
+        
+        console.log(formData);
+        // send and return
+        xhr.send(formData);
+        
+        return false;
+    };
+
+    const sendGet = (requestUrl) => {        
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', requestUrl);
+        xhr.setRequestHeader('Accept', 'application/json');
+        
+        if(requestUrl === '/getRooms') {
+            xhr.onload = () => receiveRoomList(xhr);
+        }
+        
+        xhr.send();
+        
+        return false;
+    };
+
+    const makeRoom = (e) => sendPost(e, '/makeRoom', {roomName: roomNameField.value});
+    const getRooms = () => sendGet('/getRooms');
+
+    const init = () => {
+        getRooms();
+        addRoomButton.onclick = makeRoom;
+    };
+
+    window.onload = init;
+  </script>
     </head>
+    <body>
+    <div id="content">
+        <section id="header">
+            <h1 id="appTitle">Brictochat</h1>
+        </section>
+        <section id="roomList">
+        </section>
+        <section id="controls">
+            <input type="text" placeholder="Enter Room Name" value="New Room" id="roomNameField">
+            <button id="addRoomButton">Make New Room</button>
+        </section>
+        <footer>
+            Copyright Tom Slavin 2020
+        </footer>
+    </div>
+    </body>
 </html>
