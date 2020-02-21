@@ -8,7 +8,7 @@ const sendResponse = (request, response, status, content) => {
 
   // Send back the response
   response.writeHead(status, { 'Content-Type': 'application/json' });
-  if(content != {}) response.write(responseText);
+  if(content != {}) response.write(formattedString);
   response.end();
 };
 
