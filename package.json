@@ -4,6 +4,7 @@
   "description": "A Pictochat-inspired image chatroom service API.",
   "main": "./src/server.js",
   "scripts": {
+    "start":"node ./src/server.js",
     "pretest": "eslint src --fix",
     "test": "echo \"Tests Complete\"",
     "nodemon": "nodemon -e js,html,css,json,mjs --watch ./client --watch ./src ./src/server.js"
