@@ -116,7 +116,7 @@
             switch(xhr.status){
             case 201: // room created successfully, sends creator directly to it
                 const obj = JSON.parse(xhr.response);
-                    ctx.clearRect(0,0,ctx.width, ctx.height);
+                    ctx.clearRect(0,0,drawingCanvas.width, drawingCanvas.height);
                     getMessages();
                 break;
             default:
