@@ -2,24 +2,289 @@
     <head>
         <meta charset="utf-8">
         <title>Brictochat</title>
+        <link rel="stylesheet" type="text/css" href="style.css"/>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.34/browser.min.js"></script>
-        <script type="text/babel"></script>
+        <script type="text/babel">
+            const drawingCanvas = document.querySelector('#drawingCanvas');
+            const ctx = drawingCanvas.getContext('2d');
+            const sendButton = document.querySelector('#sendButton');
+            const chatHistory = document.querySelector('#chatHistory');
+            const roomTitle = document.querySelector('#roomName');
+
+            // room number and username will be retrieved at page load
+            let userName;
+            let roomID = 0;
+            let roomData = {};
+            let messagesSeen = 0;
+
+            // Canvas-related code
+            // Just supports pencil-style stuff for now
+            let dragging = false;
+            
+            // start drawing at mouse position
+            const beginDraw = (e) => {
+                let mouse = getMouse(e);
+                ctx.beginPath();
+                ctx.lineTo(mouse.x,mouse.y);
+                dragging = true;
+            };
+            
+            const continueDraw = (e) => {
+                if(!dragging) return;
+                
+                let mouse = getMouse(e);
+//                ctx.strokeStyle = strokeStyle;
+//                ctx.lineWidth = lineWidth;
+                ctx.lineTo(mouse.x,mouse.y);
+                ctx.stroke();
+            }
+            
+            const endDraw = (e) => {
+                let mouse = getMouse(e);
+                ctx.closePath();
+                dragging = false;
+            };
+
+            // Approach taken from Prof. Jefferson's starter code for the drawing app in IGME330
+            function getMouse(e){
+                let mouse = {
+                    x: e.pageX - e.target.offsetLeft,
+                    y: e.pageY - e.target.offsetTop
+                };
+                
+                return mouse;
+            }
+
+
+    // Handles response after the user requests new messages
+    const receiveMessages = (xhr) => {
+            switch(xhr.status){
+            case 200: // Received list of rooms, create displays for them
+                const messages = JSON.parse(xhr.response);
+                console.log(messages);
+                for (let msg of messages) {
+                    let div = document.createElement('div');
+                    div.setAttribute('class', 'message');
+                    let userName = document.createElement('h2');
+                    userName.innerHTML = `${msg.senderName}`;
+                    
+                    let content;
+                    // handle text messages and image messages differently
+                    if(msg.type === 'text'){
+                        content = document.createElement('p');
+                        content.innerHTML = msg.content;
+                    }else if (msg.type === 'image'){                    
+                        content = new Image();
+                        content.src = decodeURIComponent(msg.imgData);
+                        content.classList.add("messageImage");
+                    }
+                    
+                    // add to HTML hierarchy and increment number of messages viewed
+                    div.appendChild(userName);
+                    div.appendChild(content);
+                    chatHistory.prepend(div);
+                    messagesSeen++;
+                }
+                break;
+            default:
+                // kick response down to the basic handler
+                handleResponse(xhr.status);
+                break;
+        }
+    };
+
+    // Handles response after the user asks for the room data
+    const receiveRoomInfo = (xhr) => {
+            switch(xhr.status){
+            case 200:{ // Received list of rooms, create displays for them
+                const data = JSON.parse(xhr.response);
+                console.dir(data);
+                    roomData = data;
+                    roomTitle.innerHTML = roomData[0].name;
+                break;
+                }
+            default:
+                // kick response down to the basic handler
+                handleResponse(xhr.status);
+                break;
+        }
+    };
+
+    // 
+    const messageSendResponseHandler = (xhr) => {
+        console.log(xhr.response);
+            switch(xhr.status){
+            case 201: // room created successfully, sends creator directly to it
+                const obj = JSON.parse(xhr.response);
+                    getMessages();
+                break;
+            default:
+                // kick response down to the basic handler
+                handleResponse(xhr.status);
+                break;
+        }
+    };
+
+    // Generic response handler, used as fallback for unrecognized responses
+    const handleResponse = (statusCode) => {
+        
+        // Represents the message displayed by the client, based on the status code
+        let statusMessage = "";
+        
+        switch(statusCode){
+            case 200:
+                statusMessage = 'Success';
+                break;
+            case 201:
+                statusMessage = 'Create';
+                break;
+            case 204:
+                statusMessage = 'Updated (No Content)';
+                break;
+            case 400:
+                statusMessage = 'Bad Request';
+                break;
+            case 404:
+                statusMessage = 'Resource Not Found';
+                break;
+            default:
+                statusMessage = `ERROR: The client has not implemented status code ${statusCode}`;
+                break;
+        }
+        
+        alert(`${statusMessage}`);
+    };
+
+    const sendPost = (e, requestUrl, args) => {
+        if (e !== null) e.preventDefault();
+                
+        // configure XHR
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', requestUrl);
+        xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+        xhr.setRequestHeader('Accept', 'application/json');
+        
+        if(requestUrl === '/sendMessage') {
+            xhr.onload = () => messageSendResponseHandler(xhr);
+        }
+
+        // assemble and insert form data
+        let formData = '';
+        for(let a in args){
+        if(Array.isArray(a)) {
+            // The querystring library on the server constructs arrays from elements with the same key, so arrays need to be expanded here
+            for(let b of args[a]){
+                formData += `${a}=${b}&`;
+                }
+        } else {
+            formData += `${a}=${args[a]}&`;    
+            }
+        } 
+        
+        // trim the extra & that will exist at the end, slightly hacky
+        formData = formData.slice(0, formData.length - 1);
+        
+        console.log(formData);
+        // send and return
+        xhr.send(formData);
+        
+        return false;
+    };
+
+    const sendGet = (requestUrl) => {        
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', requestUrl);
+        
+        if(requestUrl.split('?')[0] === '/getMessages') {
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.onload = () => receiveMessages(xhr);
+        } else if (requestUrl.split('?')[0] === '/getRoomInfo') {
+            xhr.setRequestHeader('Accept', 'application/json');
+            xhr.onload = () => receiveRoomInfo(xhr);
+        }
+        
+        xhr.send();
+        
+        return false;
+    };
+
+    // Sends a chat message image to the server
+    const sendMessage = (e) => {
+        let imageData = drawingCanvas.toDataURL()/*.split(',')[1]*/;
+        console.log(imageData);
+        let obj = {
+            roomID: roomID,
+            senderName: userName,
+            type: 'image',
+            imgData: encodeURIComponent(imageData),
+        }
+        sendPost(e, '/sendMessage', obj);
+    };
+
+    // Sends a text-only message announcing the user's arrival
+    const reportJoin = () => sendPost(null, '/sendMessage', {
+        roomID: roomID,senderName: userName,type: 'text', content: `joined the room!`
+    });
+
+    const getMessages = () => sendGet(`/getMessages?roomID=${roomID}&messagesSeen=${messagesSeen}`);
+
+    // Every 2 seconds, checks for new messages
+    const updateMessages = () => {
+        setInterval(getMessages, 2000);
+    }
+    
+    // Fetches the name of the chat room
+    const getRoomInfo = () => {
+        sendGet(`/getRoomInfo?roomID=${roomID}`);
+    };
+
+            // Server communication
+            const init = () => {
+                drawingCanvas.onmousedown = beginDraw;
+                drawingCanvas.onmouseup = endDraw;
+                drawingCanvas.onmouseout = endDraw;
+                drawingCanvas.onmousemove = continueDraw;
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 5;
+                dragging = false;
+                
+                // config user name and room ID, and get room information
+                let argString = window.location.search;
+                roomID = argString.match(/(?:id=)(\d+)/);
+                console.log(roomID);
+                if(roomID){
+                    roomID = Number.parseInt(roomID[1]); // gets just the numeric value
+                } else roomID = -1;
+                
+                getRoomInfo();
+                
+                userName = window.prompt("Welcome to the chat room! Please enter your name.", "Dan Singer");
+                if(userName === null || userName === undefined || userName === "") userName = "Guest";
+                
+                reportJoin(userName);
+                
+                sendButton.onclick  = sendMessage;
+                
+                // start checking for updates every 2 seconds
+                updateMessages();
+            }
+            window.onload = init;
+        </script>
     </head>
     <body>
-    <header>
-        <h1>Brictochat</h1>
-    </header>
-    <div id="content">
-        <section id="chatHistory">
-            
+        <section id="header">
+            <h1 id="appTitle">Brictochat</h1>
+            <h2 id="roomName">Room Name</h2>
         </section>
+    <div id="content">
         <section id="drawingArea">
-            <canvas id="drawingCanvas">
+            <canvas id="drawingCanvas" class="messageImage" width=600 height=480>
             </canvas>
             <button id="sendButton">
-                
+                Send!
             </button>
         </section>
+        <section id="chatHistory"></section>
     </div>
     <footer>
         Copyright Tom Slavin 2020
