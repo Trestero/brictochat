@@ -4,7 +4,9 @@
   "description": "A Pictochat-inspired image chatroom service API.",
   "main": "./src/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "pretest": "eslint src --fix",
+    "test": "echo \"Tests Complete\"",
+    "nodemon": "nodemon -e js,html,css,json,mjs --watch ./client --watch ./src ./src/server.js"
   },
   "repository": {
     "type": "git",
@@ -15,5 +17,11 @@
   "bugs": {
     "url": "https://github.com/Trestero/brictochat/issues"
   },
-  "homepage": "https://github.com/Trestero/brictochat#readme"
+  "homepage": "https://github.com/Trestero/brictochat#readme",
+  "devDependencies": {
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb": "^18.0.1",
+    "eslint-plugin-import": "^2.20.1",
+    "nodemon": "^2.0.2"
+  }
 }
