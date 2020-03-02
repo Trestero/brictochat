@@ -1,7 +1,8 @@
 const rooms = [];
 
 // Functionality related to room management
-// For now, there's no functionality to remove a room. They'll just wipe when Heroku resets.
+// For now, there's no functionality to manually remove a room.
+// They just wipe when Heroku resets.
 
 // Generates a new room and returns its ID
 const makeNewRoom = (roomName) => {
@@ -35,6 +36,8 @@ const getRoomData = () => {
   return list;
 };
 
+// Gets the room's name if it exists
+// If the roomID is invalid, returns null
 const getRoomName = (roomID) => {
   if (roomID < 0 || roomID >= rooms.length) return null;
 
@@ -77,6 +80,7 @@ const getNewMessages = (roomID, messagesSeen) => {
   return messageList;
 };
 
+// Module exports
 module.exports = {
   makeNewRoom,
   getRoomData,

@@ -82,7 +82,7 @@
                     // add to HTML hierarchy and increment number of messages viewed
                     div.appendChild(userName);
                     div.appendChild(content);
-                    chatHistory.prepend(div);
+                    chatHistory.appendChild(div);
                     messagesSeen++;
                 }
                 break;
@@ -95,39 +95,41 @@
 
     // Handles response after the user asks for the room data
     const receiveRoomInfo = (xhr) => {
+        const data = JSON.parse(xhr.response);
             switch(xhr.status){
             case 200:{ // Received list of rooms, create displays for them
-                const data = JSON.parse(xhr.response);
                 console.dir(data);
                     roomData = data;
-                    roomTitle.innerHTML = roomData[0].name;
+                    roomTitle.innerHTML = roomData.name;
                 break;
                 }
             default:
                 // kick response down to the basic handler
-                handleResponse(xhr.status);
+                handleResponse(xhr.status, data);
                 break;
         }
     };
 
-    // 
+    // Handles the server response when the user tries to send a message
     const messageSendResponseHandler = (xhr) => {
-        console.log(xhr.response);
+        const obj = JSON.parse(xhr.response);
             switch(xhr.status){
-            case 201: // room created successfully, sends creator directly to it
-                const obj = JSON.parse(xhr.response);
-                    ctx.clearRect(0,0,drawingCanvas.width, drawingCanvas.height);
+            case 201: // room created successfully, clear canvas
+                    ctx.save();
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0,0,drawingCanvas.width, drawingCanvas.height);
+                    ctx.restore();
                     getMessages();
                 break;
             default:
                 // kick response down to the basic handler
-                handleResponse(xhr.status);
+                handleResponse(xhr.status, obj);
                 break;
         }
     };
 
     // Generic response handler, used as fallback for unrecognized responses
-    const handleResponse = (statusCode) => {
+    const handleResponse = (statusCode, responseObj) => {
         
         // Represents the message displayed by the client, based on the status code
         let statusMessage = "";
@@ -143,10 +145,10 @@
                 statusMessage = 'Updated (No Content)';
                 break;
             case 400:
-                statusMessage = 'Bad Request';
+                statusMessage = `Bad Request!\n${responseObj.message}`;
                 break;
             case 404:
-                statusMessage = 'Resource Not Found';
+                statusMessage = `Resource Not Found!\n${responseObj.message}`;
                 break;
             default:
                 statusMessage = `ERROR: The client has not implemented status code ${statusCode}`;
@@ -196,11 +198,10 @@
         const xhr = new XMLHttpRequest();
         xhr.open('GET', requestUrl);
         
+        xhr.setRequestHeader('Accept', 'application/json');
         if(requestUrl.split('?')[0] === '/getMessages') {
-            xhr.setRequestHeader('Accept', 'application/json');
             xhr.onload = () => receiveMessages(xhr);
         } else if (requestUrl.split('?')[0] === '/getRoomInfo') {
-            xhr.setRequestHeader('Accept', 'application/json');
             xhr.onload = () => receiveRoomInfo(xhr);
         }
         
@@ -247,6 +248,13 @@
                 drawingCanvas.onmousemove = continueDraw;
                 ctx.strokeStyle = 'black';
                 ctx.lineWidth = 5;
+                
+                // Fill canvas with white BG
+                ctx.save();
+                ctx.fillStyle = 'white';
+                ctx.fillRect(0,0,drawingCanvas.width, drawingCanvas.height);
+                ctx.restore();
+                
                 dragging = false;
                 
                 // config user name and room ID, and get room information
@@ -275,17 +283,21 @@
     <body>
         <section id="header">
             <h1 id="appTitle">Brictochat</h1>
-            <h2 id="roomName">Room Name</h2>
+            <h2 class='centeredTitle'id="roomName">Room Name</h2>
         </section>
     <div id="content">
         <section id="drawingArea">
+            <div id="chatControls">
             <canvas id="drawingCanvas" class="messageImage" width=600 height=480>
             </canvas>
-            <button id="sendButton">
+            <button class='styledButton' id="sendButton">
                 Send!
             </button>
+            </div>
+                <div id="chatHistory">
+                    <h1 class='centeredTitle'>CHAT HISTORY</h1>
+            </div>
         </section>
-        <section id="chatHistory"></section>
     </div>
     <footer>
         Copyright Tom Slavin 2020

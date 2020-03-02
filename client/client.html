@@ -17,9 +17,9 @@
     };
 
     const receiveRoomList = (xhr) => {
+        const rooms = JSON.parse(xhr.response);
             switch(xhr.status){
             case 200: // Received list of rooms, create displays for them
-                const rooms = JSON.parse(xhr.response);
                 console.log(rooms);
                 for (let room of rooms) {
                     let div = document.createElement('div');
@@ -38,7 +38,7 @@
                 break;
             default:
                 // kick response down to the basic handler
-                handleResponse(xhr.status);
+                handleResponse(xhr.status, rooms);
                 break;
         }
     };
@@ -46,21 +46,20 @@
 
     // 
     const roomCreationResponseHandler = (xhr) => {
-        console.log(xhr.response);
+            const obj = JSON.parse(xhr.response);
             switch(xhr.status){
             case 201: // room created successfully, sends creator directly to it
-                const obj = JSON.parse(xhr.response);
                 joinRoom(obj.roomID);
                 break;
             default:
                 // kick response down to the basic handler
-                handleResponse(xhr.status);
+                handleResponse(xhr.status,obj);
                 break;
         }
     };
 
     // Generic response handler, used as fallback for unrecognized responses
-    const handleResponse = (statusCode) => {
+    const handleResponse = (statusCode, responseObj) => {
         
         // Represents the message displayed by the client, based on the status code
         let statusMessage = "";
@@ -76,10 +75,10 @@
                 statusMessage = 'Updated (No Content)';
                 break;
             case 400:
-                statusMessage = 'Bad Request';
+                statusMessage = `Bad Request!\n${responseObj.message}`;
                 break;
             case 404:
-                statusMessage = 'Resource Not Found';
+                statusMessage = `Resource Not Found!\n${responseObj.message}`;
                 break;
             default:
                 statusMessage = `ERROR: The client has not implemented status code ${statusCode}`;
@@ -151,19 +150,22 @@
   </script>
     </head>
     <body>
+    <section id="header">
+        <h1 id="appTitle">Brictochat</h1>
+    </section>
     <div id="content">
-        <section id="header">
-            <h1 id="appTitle">Brictochat</h1>
-        </section>
+        <h1 class="centeredTitle">Welcome to Brictochat!</h1>
+        <h4 class="centeredTitle">Any available chatrooms will be shown here.</h4>
         <section id="roomList">
         </section>
+        <h2 class="centeredTitle">Don't like what you see? Make your own room!</h2>
         <section id="controls">
-            <input type="text" placeholder="Enter Room Name" value="New Room" id="roomNameField">
-            <button id="addRoomButton">Make New Room</button>
+            <input type="text" placeholder="Enter Room Name" value="" id="roomNameField">
+            <button class='styledButton' id="addRoomButton">Make New Room</button>
         </section>
-        <footer>
-            Copyright Tom Slavin 2020
-        </footer>
     </div>
+    <footer>
+        Copyright Tom Slavin 2020
+    </footer>
     </body>
 </html>

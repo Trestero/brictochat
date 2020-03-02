@@ -35,16 +35,22 @@ const handleGet = (request, response, parsedUrl) => {
         jsonHandler.sendResponse(request, response, 400, { message: 'Chat log requests must contain a valid room ID and the index of the last message seen.' });
       } else {
         const messages = chatManager.getNewMessages(queryObj.roomID, queryObj.messagesSeen);
-        jsonHandler.sendResponse(request, response, 200, messages);
+        if (messages !== null) {   
+            jsonHandler.sendResponse(request, response, 200, messages);
+        } else
+            jsonHandler.sendResponse(request, response, 404, { message: 'The room you were looking for could not be found.' });
       }
       break;
     }
     case '/getRoomInfo': {
       const queryObj = parsedUrl.query;
-      if (!queryObj.roomID) jsonHandler.sendResponse(request, response, 400, { message: 'Chat log requests must contain a valid room ID and the index of the last message seen.' });
+      if (!queryObj.roomID) jsonHandler.sendResponse(request, response, 400, { message: "Request for room info must contain the ID of the room you're looking for." });
       else {
-        const roomData = chatManager.getRoomData(queryObj.roomID);
-        jsonHandler.sendResponse(request, response, 200, roomData);
+        const roomData = chatManager.getRoomName(queryObj.roomID);
+          if(roomData !== null) jsonHandler.sendResponse(request, response, 200, roomData);
+          else
+              jsonHandler.sendResponse(request, response, 404, { message: 'The room you were looking for could not be found.' });
+
       }
     }
       break;
@@ -61,6 +67,33 @@ const handleHead = (request, response, parsedUrl) => {
   switch (parsedUrl) {
     case '/getRooms':
       jsonHandler.sendResponse(request, response, 200, {});
+      break;
+    case '/chatroom':
+      jsonHandler.sendResponse(request, response, 200, {});
+      break;
+    case '/getMessages': {
+      const queryObj = parsedUrl.query;
+      if (!queryObj.roomID || !queryObj.messagesSeen) {
+        jsonHandler.sendResponse(request, response, 400, { message: 'Chat log requests must contain a valid room ID and the index of the last message seen.' });
+      } else {
+        const messages = chatManager.getNewMessages(queryObj.roomID, queryObj.messagesSeen);
+        if (messages !== null) {   
+            jsonHandler.sendResponse(request, response, 200, messages);
+        } else
+            jsonHandler.sendResponse(request, response, 404, { message: 'The room you were looking for could not be found.' });
+      }
+      break;
+    }
+    case '/getRoomInfo': {
+      const queryObj = parsedUrl.query;
+      if (!queryObj.roomID) jsonHandler.sendResponse(request, response, 400, { message: "Request for room info must contain the ID of the room you're looking for." });
+      else {
+        const roomData = chatManager.getRoomName(queryObj.roomID);
+          if(roomData !== null) jsonHandler.sendResponse(request, response, 200, {});
+          else
+              jsonHandler.sendResponse(request, response, 404, { message: 'The room you were looking for could not be found.' });
+      }
+    }
       break;
     case '/favicon.ico':
       break;
@@ -93,7 +126,7 @@ const handlePost = (request, response, parsedUrl) => {
         // User has attempted to create a new room.
         // The server expects a room name, which will be a string.
         if (!bodyParams.roomName) {
-          jsonHandler.sendResponse(request, response, 400, 'Must enter a room name.');
+          jsonHandler.sendResponse(request, response, 400, {message: 'Must enter a room name.'});
         } else {
           const id = chatManager.makeNewRoom(bodyParams.roomName);
           jsonHandler.sendResponse(request, response, 201, { roomID: id });
@@ -103,7 +136,7 @@ const handlePost = (request, response, parsedUrl) => {
         // User has sent a message to a chatroom.
         // The server expects a valid room ID, and a message.
         if (!bodyParams.roomID || !bodyParams.type) {
-          jsonHandler.sendResponse(request, response, 400, 'Request must contain both a valid Room ID and a message.');
+          jsonHandler.sendResponse(request, response, 400, {message: 'Request must contain both a valid Room ID and a message.'});
         } else {
           const messageObj = {
             senderName: bodyParams.senderName,
@@ -121,7 +154,7 @@ const handlePost = (request, response, parsedUrl) => {
         }
         break;
       default:
-        jsonHandler.sendResponse(request, response, 404, 'Resource was not found.');
+        jsonHandler.sendResponse(request, response, 404, {message:'Resource was not found.'});
         break;
     }
   });
